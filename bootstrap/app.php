@@ -1,8 +1,10 @@
 <?php
 
+use App\Services\Omdb\OmdbException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,5 +17,17 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->throttleApi('60,1');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Anything under /api answers with JSON, even without an Accept header.
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson()
+        );
+
+        $exceptions->render(
+            fn (OmdbException $e) => response()->json(['message' => $e->getMessage()], $e->status())
+        );
+
+        // Bad searches and rate limits are normal events. Only real failures belong in the log.
+        $exceptions->dontReportWhen(
+            fn (Throwable $e) => $e instanceof OmdbException && $e->status() < 500
+        );
     })->create();
