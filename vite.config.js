@@ -7,7 +7,7 @@ export default defineConfig({
     plugins: [
         vue(),
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
+            input: ['resources/css/app.css', 'resources/js/app.ts'],
             refresh: true,
         }),
         tailwindcss(),
@@ -19,6 +19,6 @@ export default defineConfig({
     },
     test: {
         environment: 'jsdom',
-        include: ['resources/js/**/*.spec.js'],
+        include: ['resources/js/**/*.spec.ts'],
     },
 });
