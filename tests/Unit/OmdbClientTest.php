@@ -86,6 +86,69 @@ class OmdbClientTest extends TestCase
         $this->assertNull($result['items'][0]['poster']);
     }
 
+    public function test_repeated_search_is_served_from_cache(): void
+    {
+        $this->fakeSearch([
+            ['Title' => 'Batman Begins', 'Year' => '2005', 'imdbID' => 'tt0372784', 'Type' => 'movie', 'Poster' => 'N/A'],
+        ], '1');
+
+        $first = $this->client()->search('batman');
+        $second = $this->client()->search('batman');
+
+        $this->assertSame($first, $second);
+        Http::assertSentCount(1);
+    }
+
+    public function test_cache_ignores_letter_case_and_surrounding_spaces(): void
+    {
+        $this->fakeSearch();
+
+        $this->client()->search('Batman');
+        $this->client()->search('  batman ');
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_each_page_is_cached_separately(): void
+    {
+        $this->fakeSearch();
+
+        $this->client()->search('batman', 1);
+        $this->client()->search('batman', 2);
+        $this->client()->search('batman', 2);
+
+        Http::assertSentCount(2);
+    }
+
+    public function test_unknown_title_is_cached_too(): void
+    {
+        Http::fake([self::BASE_URL.'*' => Http::response(['Response' => 'False', 'Error' => 'Movie not found!'])]);
+
+        $this->client()->search('zzzzqqqxxyy');
+        $this->client()->search('zzzzqqqxxyy');
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_failures_are_not_cached(): void
+    {
+        Http::fake([
+            self::BASE_URL.'*' => Http::sequence()
+                ->push(['Response' => 'False', 'Error' => 'Request limit reached!'], 401)
+                ->push(['Search' => [], 'totalResults' => '0', 'Response' => 'True']),
+        ]);
+
+        try {
+            $this->client()->search('batman');
+            $this->fail('Expected an OmdbException.');
+        } catch (OmdbException) {
+            // The first attempt fails, the second one must reach OMDb again.
+        }
+
+        $this->assertSame([], $this->client()->search('batman')['items']);
+        Http::assertSentCount(2);
+    }
+
     public function test_unknown_title_gives_an_empty_result(): void
     {
         Http::fake([self::BASE_URL.'*' => Http::response(['Response' => 'False', 'Error' => 'Movie not found!'])]);

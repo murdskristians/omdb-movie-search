@@ -4,6 +4,7 @@ namespace App\Services\Omdb;
 
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -11,6 +12,9 @@ class OmdbClient
 {
     /** Number of results OMDb returns on one search page. */
     public const PAGE_SIZE = 10;
+
+    /** OMDb allows 1000 requests a day, so repeated searches are kept for a while. */
+    private const SEARCH_CACHE_SECONDS = 600;
 
     public function __construct(
         private readonly string $baseUrl,
@@ -30,6 +34,17 @@ class OmdbClient
      */
     public function search(string $query, int $page = 1): array
     {
+        // Only finished answers are cached. When fetchSearch() throws, nothing is stored.
+        return Cache::remember(
+            $this->searchCacheKey($query, $page),
+            self::SEARCH_CACHE_SECONDS,
+            fn () => $this->fetchSearch($query, $page),
+        );
+    }
+
+    /** @throws OmdbException */
+    private function fetchSearch(string $query, int $page): array
+    {
         try {
             $body = $this->request([
                 's' => $query,
@@ -47,6 +62,12 @@ class OmdbClient
             'items' => array_map($this->normalizeSummary(...), $body['Search'] ?? []),
             'total' => (int) ($body['totalResults'] ?? 0),
         ];
+    }
+
+    /** "Batman" and " batman " are the same search, so they share one cache entry. */
+    private function searchCacheKey(string $query, int $page): string
+    {
+        return 'omdb:search:'.md5(mb_strtolower(trim($query))).':'.$page;
     }
 
     /**
