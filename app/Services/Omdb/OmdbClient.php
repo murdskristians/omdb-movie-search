@@ -9,6 +9,9 @@ use Throwable;
 
 class OmdbClient
 {
+    /** Number of results OMDb returns on one search page. */
+    public const PAGE_SIZE = 10;
+
     public function __construct(
         private readonly string $baseUrl,
         private readonly ?string $apiKey,
