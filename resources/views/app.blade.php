@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="lv">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>OMDb filmu meklēšana</title>
+    <title>OMDb Movie Search</title>
     @vite(['resources/css/app.css', 'resources/js/app.ts'])
 </head>
 <body>

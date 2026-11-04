@@ -6,6 +6,6 @@ describe('App', () => {
     it('renders the heading', () => {
         const wrapper = mount(App);
 
-        expect(wrapper.find('h1').text()).toBe('OMDb filmu meklēšana');
+        expect(wrapper.find('h1').text()).toBe('OMDb Movie Search');
     });
 });

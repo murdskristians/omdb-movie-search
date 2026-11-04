@@ -1,10 +1,10 @@
 <script setup lang="ts">
-const appName = 'OMDb filmu meklēšana';
+const appName = 'OMDb Movie Search';
 </script>
 
 <template>
     <main>
         <h1>{{ appName }}</h1>
-        <p>Vue 3 darbojas. Šeit nāks meklēšana, rezultāti un filmu detaļas.</p>
+        <p>Vue 3 is running. Search, results and movie details will go here.</p>
     </main>
 </template>
