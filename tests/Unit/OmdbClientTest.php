@@ -3,13 +3,26 @@
 namespace Tests\Unit;
 
 use App\Services\Omdb\OmdbClient;
+use App\Services\Omdb\OmdbErrorKind;
+use App\Services\Omdb\OmdbException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class OmdbClientTest extends TestCase
 {
     private const BASE_URL = 'https://www.omdbapi.com/';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Retries would otherwise really wait between attempts.
+        Sleep::fake();
+    }
 
     private function client(): OmdbClient
     {
@@ -71,5 +84,87 @@ class OmdbClientTest extends TestCase
         $result = $this->client()->search('no poster');
 
         $this->assertNull($result['items'][0]['poster']);
+    }
+
+    public function test_unknown_title_gives_an_empty_result(): void
+    {
+        Http::fake([self::BASE_URL.'*' => Http::response(['Response' => 'False', 'Error' => 'Movie not found!'])]);
+
+        $this->assertSame(['items' => [], 'total' => 0], $this->client()->search('zzzzqqqxxyy'));
+    }
+
+    /** @return array<string, array{string, int, OmdbErrorKind}> */
+    public static function errorResponses(): array
+    {
+        return [
+            'too many results' => ['Too many results.', 200, OmdbErrorKind::TooManyResults],
+            'invalid key' => ['Invalid API key!', 401, OmdbErrorKind::InvalidKey],
+            'missing key' => ['No API key provided.', 401, OmdbErrorKind::InvalidKey],
+            'request limit' => ['Request limit reached!', 401, OmdbErrorKind::RateLimited],
+            'something new' => ['Something unexpected', 200, OmdbErrorKind::Upstream],
+        ];
+    }
+
+    #[DataProvider('errorResponses')]
+    public function test_omdb_errors_become_exceptions(string $error, int $httpStatus, OmdbErrorKind $kind): void
+    {
+        Http::fake([self::BASE_URL.'*' => Http::response(['Response' => 'False', 'Error' => $error], $httpStatus)]);
+
+        try {
+            $this->client()->search('batman');
+            $this->fail('Expected an OmdbException.');
+        } catch (OmdbException $e) {
+            $this->assertSame($kind, $e->kind);
+        }
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_connection_failure_becomes_upstream_error(): void
+    {
+        Http::fake(fn () => throw new ConnectionException('Connection refused'));
+
+        try {
+            $this->client()->search('batman');
+            $this->fail('Expected an OmdbException.');
+        } catch (OmdbException $e) {
+            $this->assertSame(OmdbErrorKind::Upstream, $e->kind);
+            $this->assertInstanceOf(ConnectionException::class, $e->getPrevious());
+        }
+    }
+
+    public function test_retries_after_a_server_error(): void
+    {
+        Http::fake([
+            self::BASE_URL.'*' => Http::sequence()
+                ->push('Service Unavailable', 503)
+                ->push(['Search' => [], 'totalResults' => '0', 'Response' => 'True']),
+        ]);
+
+        $result = $this->client()->search('batman');
+
+        $this->assertSame([], $result['items']);
+        Http::assertSentCount(2);
+    }
+
+    public function test_gives_up_with_upstream_error_when_server_keeps_failing(): void
+    {
+        Http::fake([self::BASE_URL.'*' => Http::response('Bad Gateway', 502)]);
+
+        try {
+            $this->client()->search('batman');
+            $this->fail('Expected an OmdbException.');
+        } catch (OmdbException $e) {
+            $this->assertSame(OmdbErrorKind::Upstream, $e->kind);
+        }
+    }
+
+    public function test_response_that_is_not_json_becomes_upstream_error(): void
+    {
+        Http::fake([self::BASE_URL.'*' => Http::response('<html>oops</html>', 200)]);
+
+        $this->expectException(OmdbException::class);
+
+        $this->client()->search('batman');
     }
 }
