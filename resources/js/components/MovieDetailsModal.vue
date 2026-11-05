@@ -90,10 +90,10 @@ function formatVotes(votes: number): string {
             aria-modal="true"
             aria-label="Movie details"
             tabindex="-1"
-            class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 focus:outline-none"
+            class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-4 focus:outline-none sm:p-6"
         >
             <div class="mb-4 flex justify-end">
-                <button type="button" class="rounded border border-gray-300 px-3 py-1" @click="emit('close')">
+                <button type="button" class="min-h-11 rounded border border-gray-300 px-4" @click="emit('close')">
                     Close
                 </button>
             </div>
@@ -103,10 +103,13 @@ function formatVotes(votes: number): string {
             <p v-else-if="state.status === 'error'" class="py-8 text-center text-red-700">{{ state.message }}</p>
 
             <div v-else-if="state.status === 'success'" class="grid gap-6 sm:grid-cols-[12rem_1fr]">
-                <PosterImage :src="state.movie.poster" :alt="state.movie.title" />
+                <!-- A small poster on phones, so the text is not pushed off the screen. -->
+                <div class="mx-auto w-32 sm:w-full">
+                    <PosterImage :src="state.movie.poster" :alt="state.movie.title" />
+                </div>
 
                 <div>
-                    <h2 class="text-2xl font-bold">{{ state.movie.title }}</h2>
+                    <h2 class="break-words text-2xl font-bold">{{ state.movie.title }}</h2>
                     <p class="text-gray-600">{{ summaryLine(state.movie) }}</p>
 
                     <ul v-if="state.movie.genres.length > 0" class="mt-3 flex flex-wrap gap-2">
@@ -156,7 +159,7 @@ function formatVotes(votes: number): string {
                         :href="`https://www.imdb.com/title/${state.movie.imdb_id}/`"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="mt-4 inline-block text-sm underline"
+                        class="mt-2 inline-flex min-h-11 items-center text-sm underline"
                     >
                         View on IMDb
                     </a>

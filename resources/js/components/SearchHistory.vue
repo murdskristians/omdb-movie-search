@@ -11,13 +11,13 @@ const emit = defineEmits<{ select: [text: string]; clear: [] }>();
             <li v-for="text in items" :key="text">
                 <button
                     type="button"
-                    class="max-w-48 truncate rounded-full border border-gray-300 px-3 py-1 text-sm hover:bg-gray-100"
+                    class="min-h-11 max-w-48 truncate rounded-full border border-gray-300 px-4 text-sm hover:bg-gray-100"
                     @click="emit('select', text)"
                 >
                     {{ text }}
                 </button>
             </li>
         </ul>
-        <button type="button" class="text-sm text-gray-600 underline" @click="emit('clear')">Clear</button>
+        <button type="button" class="min-h-11 px-2 text-sm text-gray-600 underline" @click="emit('clear')">Clear</button>
     </section>
 </template>

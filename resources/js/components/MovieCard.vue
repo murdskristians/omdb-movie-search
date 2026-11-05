@@ -10,7 +10,7 @@ const emit = defineEmits<{ select: [imdbId: string] }>();
 <template>
     <article class="relative flex flex-col gap-2">
         <PosterImage :src="movie.poster" :alt="movie.title" />
-        <h2 class="font-semibold leading-tight">
+        <h2 class="break-words font-semibold leading-tight">
             <!-- The ::after layer stretches this one real button over the whole card. -->
             <button
                 type="button"
