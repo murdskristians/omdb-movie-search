@@ -230,4 +230,37 @@ class OmdbClientTest extends TestCase
 
         $this->client()->search('batman');
     }
+
+    public function test_entries_without_an_id_or_a_title_are_left_out(): void
+    {
+        $this->fakeSearch([
+            ['Title' => 'Batman Begins', 'Year' => '2005', 'imdbID' => 'tt0372784', 'Type' => 'movie', 'Poster' => 'N/A'],
+            ['Year' => '2006', 'imdbID' => 'tt0000002', 'Type' => 'movie', 'Poster' => 'N/A'],
+            ['Title' => 'No id', 'Year' => '2007', 'Type' => 'movie', 'Poster' => 'N/A'],
+            'not even an entry',
+            ['Title' => 'The Dark Knight', 'Year' => '2008', 'imdbID' => 'tt0468569', 'Type' => 'movie', 'Poster' => 'N/A'],
+        ], '5');
+
+        $titles = array_column($this->client()->search('batman')['items'], 'title');
+
+        $this->assertSame(['Batman Begins', 'The Dark Knight'], $titles);
+    }
+
+    public function test_missing_year_and_type_become_empty_text(): void
+    {
+        $this->fakeSearch([['Title' => 'Batman Begins', 'imdbID' => 'tt0372784']], '1');
+
+        $item = $this->client()->search('batman')['items'][0];
+
+        $this->assertSame('', $item['year']);
+        $this->assertSame('', $item['type']);
+        $this->assertNull($item['poster']);
+    }
+
+    public function test_a_search_field_that_is_not_a_list_gives_no_results(): void
+    {
+        Http::fake([self::BASE_URL.'*' => Http::response(['Search' => 'oops', 'totalResults' => '1', 'Response' => 'True'])]);
+
+        $this->assertSame([], $this->client()->search('batman')['items']);
+    }
 }
