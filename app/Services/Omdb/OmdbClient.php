@@ -16,6 +16,9 @@ class OmdbClient
     /** OMDb allows 1000 requests a day, so repeated searches are kept for a while. */
     private const SEARCH_CACHE_SECONDS = 600;
 
+    /** 24 hours */
+    private const DETAILS_CACHE_SECONDS = 86400;
+
     public function __construct(
         private readonly string $baseUrl,
         private readonly ?string $apiKey,
@@ -90,6 +93,17 @@ class OmdbClient
      * @throws OmdbException
      */
     public function find(string $imdbId): array
+    {
+        // A movie's details hardly ever change. Failures (unknown id, OMDb down) are not stored.
+        return Cache::remember(
+            'omdb:movie:'.$imdbId,
+            self::DETAILS_CACHE_SECONDS,
+            fn () => $this->fetchDetails($imdbId),
+        );
+    }
+
+    /** @throws OmdbException */
+    private function fetchDetails(string $imdbId): array
     {
         $body = $this->request(['i' => $imdbId, 'plot' => 'full']);
 

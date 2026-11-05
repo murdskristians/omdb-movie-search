@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SearchMovieRequest;
+use App\Http\Resources\MovieDetailsResource;
 use App\Http\Resources\MovieSummaryResource;
 use App\Services\Omdb\OmdbClient;
 use App\Services\SearchHistory;
@@ -30,5 +31,10 @@ class MovieController extends Controller
                 'last_page' => max(1, (int) ceil($result['total'] / OmdbClient::PAGE_SIZE)),
             ],
         ]);
+    }
+
+    public function show(string $imdbId, OmdbClient $omdb): MovieDetailsResource
+    {
+        return new MovieDetailsResource($omdb->find($imdbId));
     }
 }

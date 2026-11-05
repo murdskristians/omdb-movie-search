@@ -165,6 +165,42 @@ class OmdbClientFindTest extends TestCase
         );
     }
 
+    public function test_repeated_lookup_is_served_from_the_cache(): void
+    {
+        $this->fakeMovie();
+
+        $first = $this->client()->find('tt0372784');
+        $second = $this->client()->find('tt0372784');
+
+        $this->assertSame($first, $second);
+        Http::assertSentCount(1);
+    }
+
+    public function test_each_id_is_cached_separately(): void
+    {
+        $this->fakeMovie();
+
+        $this->client()->find('tt0372784');
+        $this->client()->find('tt0000001');
+
+        Http::assertSentCount(2);
+    }
+
+    public function test_failures_are_not_cached(): void
+    {
+        Http::fake([self::BASE_URL.'*' => Http::sequence()
+            ->push(['Response' => 'False', 'Error' => 'Error getting data.'])
+            ->push($this->batmanBegins())]);
+
+        try {
+            $this->client()->find('tt0372784');
+            $this->fail('Expected an OmdbException.');
+        } catch (OmdbException) {
+        }
+
+        $this->assertSame('Batman Begins', $this->client()->find('tt0372784')['title']);
+    }
+
     public function test_missing_year_and_type_become_empty_text(): void
     {
         Http::fake([self::BASE_URL.'*' => Http::response(array_diff_key($this->batmanBegins(), ['Year' => 1, 'Type' => 1]))]);
