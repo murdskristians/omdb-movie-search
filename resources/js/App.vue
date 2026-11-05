@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import MovieList from './components/MovieList.vue';
 import Pagination from './components/Pagination.vue';
 import SearchForm from './components/SearchForm.vue';
+import SearchHistory from './components/SearchHistory.vue';
 import StatusMessage from './components/StatusMessage.vue';
 import { useMovieSearch } from './composables/useMovieSearch';
+import { useSearchHistory } from './composables/useSearchHistory';
 
 const appName = 'OMDb Movie Search';
 
@@ -12,14 +14,24 @@ const appName = 'OMDb Movie Search';
 const MAX_PAGE = 100;
 
 const { state, query, page, submit, goToPage } = useMovieSearch();
+const { items: recentSearches, refresh: refreshHistory, clear: clearHistory } = useSearchHistory();
 
 const lastPage = computed(() => (state.value.status === 'success' ? Math.min(state.value.meta.last_page, MAX_PAGE) : 1));
+
+onMounted(refreshHistory);
+
+// The server records a search while answering it, so ask for the list again once it is done.
+async function search(text: string): Promise<void> {
+    await submit(text);
+    await refreshHistory();
+}
 </script>
 
 <template>
     <main class="mx-auto max-w-4xl px-4 py-8">
         <h1 class="mb-6 text-3xl font-bold">{{ appName }}</h1>
-        <SearchForm :disabled="state.status === 'loading'" @search="submit" />
+        <SearchForm :disabled="state.status === 'loading'" @search="search" />
+        <SearchHistory :items="recentSearches" @select="search" @clear="clearHistory" />
         <StatusMessage :state="state" :query="query" />
         <template v-if="state.status === 'success'">
             <MovieList :movies="state.movies" class="mt-8" />
