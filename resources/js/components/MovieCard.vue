@@ -11,10 +11,11 @@ const emit = defineEmits<{ select: [imdbId: string] }>();
     <article class="relative flex flex-col gap-2">
         <PosterImage :src="movie.poster" :alt="movie.title" />
         <h2 class="break-words font-semibold leading-tight">
-            <!-- The ::after layer stretches this one real button over the whole card. -->
+            <!-- The ::after layer stretches this one real button over the whole card, so the ring around it
+                 appears (fading in) when the pointer is anywhere on the card. -->
             <button
                 type="button"
-                class="text-left after:absolute after:inset-0 after:rounded focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-gray-900"
+                class="text-left after:absolute after:inset-0 after:rounded after:transition-shadow after:duration-150 hover:underline hover:after:ring-2 hover:after:ring-gray-900 focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-gray-900 motion-reduce:after:transition-none"
                 @click="emit('select', movie.imdb_id)"
             >
                 {{ movie.title }}

@@ -15,8 +15,8 @@ const appName = 'OMDb Movie Search';
 // The backend (and OMDb) accept pages 1 to 100 only, even if a search matches more movies.
 const MAX_PAGE = 100;
 
-const { state, query, page, submit, goToPage } = useMovieSearch();
-const { items: recentSearches, refresh: refreshHistory, clear: clearHistory } = useSearchHistory();
+const { state, query, page, pageError, submit, goToPage } = useMovieSearch();
+const { items: recentSearches, error: historyError, refresh: refreshHistory, clear: clearHistory } = useSearchHistory();
 
 const { state: details, open: openDetails, close: closeDetails } = useMovieDetails();
 
@@ -37,11 +37,12 @@ async function search(text: string): Promise<void> {
     <main class="mx-auto max-w-4xl px-4 py-8">
         <h1 class="mb-6 text-3xl font-bold">{{ appName }}</h1>
         <SearchForm :disabled="state.status === 'loading'" @search="search" />
-        <SearchHistory :items="recentSearches" @select="search" @clear="clearHistory" />
+        <SearchHistory :items="recentSearches" :error="historyError" @select="search" @clear="clearHistory" />
         <StatusMessage :state="state" :query="query" />
         <template v-if="state.status === 'success'">
             <MovieList :movies="state.movies" class="mt-8" @select="openDetails" />
             <PaginationNav :page="page" :last-page="lastPage" class="mt-8" @change="goToPage" />
+            <p v-if="pageError" role="alert" class="mt-4 text-center text-red-700">{{ pageError }}</p>
         </template>
         <MovieDetailsModal :state="details" @close="closeDetails" />
     </main>

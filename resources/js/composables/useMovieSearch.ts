@@ -13,17 +13,23 @@ export function useMovieSearch(search: typeof searchMovies = searchMovies) {
     const state = ref<SearchState>({ status: 'idle' });
     const query = ref('');
     const page = ref(1);
+    // Set when moving to another page fails. The results of the page we were on stay on screen.
+    const pageError = ref<string | null>(null);
 
     let controller: AbortController | null = null;
 
-    async function run(text: string, pageNumber: number): Promise<void> {
+    async function run(text: string, pageNumber: number, keepResultsOnError = false): Promise<void> {
         // Only the newest request may update the screen, so stop the previous one.
         controller?.abort();
         const current = new AbortController();
         controller = current;
 
+        const previousState = state.value;
+        const previousPage = page.value;
+
         query.value = text;
         page.value = pageNumber;
+        pageError.value = null;
         state.value = { status: 'loading' };
 
         try {
@@ -39,10 +45,17 @@ export function useMovieSearch(search: typeof searchMovies = searchMovies) {
                 return;
             }
 
-            state.value = {
-                status: 'error',
-                message: error instanceof Error ? error.message : 'Something went wrong.',
-            };
+            const message = error instanceof Error ? error.message : 'Something went wrong.';
+
+            if (keepResultsOnError && previousState.status === 'success') {
+                state.value = previousState;
+                page.value = previousPage;
+                pageError.value = message;
+
+                return;
+            }
+
+            state.value = { status: 'error', message };
         }
     }
 
@@ -53,8 +66,8 @@ export function useMovieSearch(search: typeof searchMovies = searchMovies) {
     }
 
     function goToPage(pageNumber: number): Promise<void> {
-        return run(query.value, pageNumber);
+        return run(query.value, pageNumber, true);
     }
 
-    return { state, query, page, submit, goToPage };
+    return { state, query, page, pageError, submit, goToPage };
 }

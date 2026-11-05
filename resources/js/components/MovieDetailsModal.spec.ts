@@ -225,6 +225,26 @@ describe('MovieDetailsModal keyboard and screen reader support', () => {
         expect(document.activeElement).toBe(card);
     });
 
+    it('keeps the page behind from scrolling while the window is open', async () => {
+        const wrapper = show({ status: 'idle' });
+        expect(document.body.classList.contains('overflow-hidden')).toBe(false);
+
+        await wrapper.setProps({ state: { status: 'loading' } });
+        expect(document.body.classList.contains('overflow-hidden')).toBe(true);
+
+        await wrapper.setProps({ state: { status: 'idle' } });
+        expect(document.body.classList.contains('overflow-hidden')).toBe(false);
+    });
+
+    it('lets the page scroll again when the window is removed while open', () => {
+        const wrapper = show(success);
+        expect(document.body.classList.contains('overflow-hidden')).toBe(true);
+
+        wrapper.unmount();
+
+        expect(document.body.classList.contains('overflow-hidden')).toBe(false);
+    });
+
     it('keeps Tab inside the window: from the last element to the first', () => {
         const wrapper = show(success);
         const close = wrapper.find('button').element;

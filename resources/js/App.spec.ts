@@ -44,6 +44,10 @@ const beginsDetails: MovieDetails = {
 class FakeApi {
     history: string[];
     requests: string[] = [];
+    /** When true, no request reaches the server at all, as if the connection was lost. */
+    offline = false;
+    /** When true, the server refuses to clear the history. */
+    refuseClear = false;
 
     constructor(history: string[] = []) {
         this.history = history;
@@ -56,6 +60,10 @@ class FakeApi {
             `${method} ${url}${config.params ? `?q=${config.params.q}&page=${config.params.page}` : ''}`,
         );
 
+        if (this.offline) {
+            return Promise.reject(new AxiosError('Network Error', 'ERR_NETWORK', config));
+        }
+
         const [status, data] = this.answer(method, url, config);
         const response = { data, status, statusText: '', headers: {}, config };
 
@@ -67,6 +75,10 @@ class FakeApi {
     private answer(method: string, url: string, config: InternalAxiosRequestConfig): [number, unknown] {
         if (url === '/history') {
             if (method === 'DELETE') {
+                if (this.refuseClear) {
+                    return [419, { message: 'CSRF token mismatch.' }];
+                }
+
                 this.history = [];
 
                 return [204, ''];
@@ -195,6 +207,27 @@ describe('App', () => {
         expect(chips(wrapper)).toEqual(['batman']);
     });
 
+    it('keeps the results on screen when the next page cannot be loaded, and works again later', async () => {
+        const api = new FakeApi();
+        const wrapper = await openApp(api);
+        await search(wrapper, 'batman');
+
+        api.offline = true;
+        await buttonWithText(wrapper, 'Next').trigger('click');
+        await flushPromises();
+
+        expect(titles(wrapper)).toEqual(['Batman Begins', 'The Dark Knight']);
+        expect(wrapper.text()).toContain('Page 1 of 3');
+        expect(wrapper.find('[role="alert"]').text()).toContain('Cannot reach the server');
+
+        api.offline = false;
+        await buttonWithText(wrapper, 'Next').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.text()).toContain('Page 2 of 3');
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    });
+
     it('says so when nothing was found, and does not remember that search', async () => {
         const wrapper = await openApp(new FakeApi());
 
@@ -253,6 +286,26 @@ describe('App', () => {
         await flushPromises();
 
         expect(wrapper.find('[role="dialog"]').text()).toContain('Movie not found.');
+    });
+
+    it('tells the visitor when the recent searches could not be cleared', async () => {
+        const api = new FakeApi(['matrix', 'batman']);
+        const wrapper = await openApp(api);
+        api.refuseClear = true;
+
+        await buttonWithText(wrapper, 'Clear').trigger('click');
+        await flushPromises();
+
+        expect(chips(wrapper)).toEqual(['matrix', 'batman']);
+        expect(wrapper.find('section[aria-label="Recent searches"] [role="alert"]').text()).toContain(
+            'Could not clear the recent searches',
+        );
+
+        api.refuseClear = false;
+        await buttonWithText(wrapper, 'Clear').trigger('click');
+        await flushPromises();
+
+        expect(chips(wrapper)).toEqual([]);
     });
 
     it('clears the recent searches', async () => {

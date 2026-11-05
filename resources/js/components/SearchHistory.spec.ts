@@ -25,6 +25,20 @@ describe('SearchHistory', () => {
         expect(wrapper.emitted('select')).toEqual([['batman']]);
     });
 
+    it('shows no error line unless there is an error', () => {
+        const wrapper = mount(SearchHistory, { props: { items: ['batman'] } });
+
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    });
+
+    it('shows the error next to the recent searches', () => {
+        const wrapper = mount(SearchHistory, {
+            props: { items: ['batman'], error: 'Could not clear the recent searches. Please try again.' },
+        });
+
+        expect(wrapper.find('[role="alert"]').text()).toBe('Could not clear the recent searches. Please try again.');
+    });
+
     it('emits clear when Clear is clicked', async () => {
         const wrapper = mount(SearchHistory, { props: { items: ['batman'] } });
 

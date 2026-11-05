@@ -9,7 +9,7 @@ const emit = defineEmits<{ change: [page: number] }>();
         <button
             type="button"
             :disabled="page <= 1"
-            class="min-h-11 rounded border border-gray-300 px-4 disabled:opacity-50"
+            class="clickable min-h-11 rounded border border-gray-300 px-4 disabled:opacity-50"
             @click="emit('change', page - 1)"
         >
             Previous
@@ -18,7 +18,7 @@ const emit = defineEmits<{ change: [page: number] }>();
         <button
             type="button"
             :disabled="page >= lastPage"
-            class="min-h-11 rounded border border-gray-300 px-4 disabled:opacity-50"
+            class="clickable min-h-11 rounded border border-gray-300 px-4 disabled:opacity-50"
             @click="emit('change', page + 1)"
         >
             Next

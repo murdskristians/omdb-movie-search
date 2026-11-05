@@ -33,7 +33,7 @@ function onSubmit(): void {
         <button
             type="submit"
             :disabled="disabled || text.trim() === ''"
-            class="min-h-11 rounded bg-gray-900 px-4 text-white disabled:opacity-50"
+            class="clickable min-h-11 rounded bg-gray-900 px-4 text-white disabled:opacity-50"
         >
             Search
         </button>

@@ -49,10 +49,13 @@ watch(
         if (open) {
             opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
             document.addEventListener('keydown', onKeydown);
+            // The page behind the window stays where it is while the window is open.
+            document.body.classList.add('overflow-hidden');
             await nextTick();
             panel.value?.focus();
         } else {
             document.removeEventListener('keydown', onKeydown);
+            document.body.classList.remove('overflow-hidden');
             opener?.focus();
             opener = null;
         }
@@ -60,7 +63,10 @@ watch(
     { immediate: true },
 );
 
-onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
+onBeforeUnmount(() => {
+    document.removeEventListener('keydown', onKeydown);
+    document.body.classList.remove('overflow-hidden');
+});
 
 // The IMDb rating has its own line, so the list of other ratings leaves it out.
 const IMDB_SOURCE = 'Internet Movie Database';
@@ -81,7 +87,7 @@ function formatVotes(votes: number): string {
 <template>
     <div
         v-if="isOpen"
-        class="fixed inset-0 z-10 flex items-center justify-center bg-black/60 p-4"
+        class="fixed inset-0 z-10 flex cursor-pointer items-center justify-center bg-black/60 p-4"
         @click.self="emit('close')"
     >
         <div
@@ -90,10 +96,14 @@ function formatVotes(votes: number): string {
             aria-modal="true"
             aria-label="Movie details"
             tabindex="-1"
-            class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-4 focus:outline-none sm:p-6"
+            class="max-h-[90vh] w-full max-w-3xl cursor-auto overflow-y-auto rounded-lg bg-white p-4 focus:outline-none sm:p-6"
         >
             <div class="mb-4 flex justify-end">
-                <button type="button" class="min-h-11 rounded border border-gray-300 px-4" @click="emit('close')">
+                <button
+                    type="button"
+                    class="clickable min-h-11 rounded border border-gray-300 px-4"
+                    @click="emit('close')"
+                >
                     Close
                 </button>
             </div>
@@ -164,7 +174,7 @@ function formatVotes(votes: number): string {
                         :href="`https://www.imdb.com/title/${state.movie.imdb_id}/`"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="mt-2 inline-flex min-h-11 items-center text-sm underline"
+                        class="clickable mt-2 inline-flex min-h-11 items-center rounded px-1 text-sm underline"
                     >
                         View on IMDb
                     </a>

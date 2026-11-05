@@ -9,3 +9,35 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/* Tailwind leaves buttons with the arrow cursor, so say it here: what can be clicked shows a pointing hand. */
+@layer base {
+    button:not(:disabled),
+    a[href],
+    input[type='search']::-webkit-search-cancel-button {
+        cursor: pointer;
+    }
+
+    button:disabled {
+        cursor: not-allowed;
+    }
+}
+
+/* A ring that fades in around a control when the pointer is over it or the keyboard focus is on it. */
+@utility clickable {
+    outline: 2px solid transparent;
+    outline-offset: 0;
+    transition:
+        outline-color 150ms ease-out,
+        outline-offset 150ms ease-out;
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+        outline-color: var(--color-gray-900);
+        outline-offset: 3px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
+}

@@ -106,6 +106,67 @@ describe('useMovieSearch', () => {
         expect(page.value).toBe(3);
     });
 
+    it('keeps the results and the page when moving to another page fails', async () => {
+        const search = vi
+            .fn<Search>()
+            .mockResolvedValueOnce(response(['Batman Begins']))
+            .mockRejectedValueOnce(new ApiError('Cannot reach the server.', null));
+        const { state, page, pageError, submit, goToPage } = useMovieSearch(search);
+        await submit('batman');
+
+        await goToPage(2);
+
+        expect(state.value).toMatchObject({ status: 'success', movies: [movie('Batman Begins')] });
+        expect(page.value).toBe(1);
+        expect(pageError.value).toBe('Cannot reach the server.');
+    });
+
+    it('forgets the page error when the next page request works', async () => {
+        const search = vi
+            .fn<Search>()
+            .mockResolvedValueOnce(response(['Batman Begins']))
+            .mockRejectedValueOnce(new ApiError('Cannot reach the server.', null))
+            .mockResolvedValueOnce(response(['The Dark Knight'], 2));
+        const { state, page, pageError, submit, goToPage } = useMovieSearch(search);
+        await submit('batman');
+        await goToPage(2);
+
+        await goToPage(2);
+
+        expect(pageError.value).toBeNull();
+        expect(page.value).toBe(2);
+        expect(state.value).toMatchObject({ status: 'success', movies: [movie('The Dark Knight')] });
+    });
+
+    it('forgets the page error when a new search starts', async () => {
+        const search = vi
+            .fn<Search>()
+            .mockResolvedValueOnce(response(['Batman Begins']))
+            .mockRejectedValueOnce(new ApiError('Cannot reach the server.', null))
+            .mockResolvedValueOnce(response(['The Matrix']));
+        const { pageError, submit, goToPage } = useMovieSearch(search);
+        await submit('batman');
+        await goToPage(2);
+
+        await submit('matrix');
+
+        expect(pageError.value).toBeNull();
+    });
+
+    it('a new search that fails still shows the error and drops the old results', async () => {
+        const search = vi
+            .fn<Search>()
+            .mockResolvedValueOnce(response(['Batman Begins']))
+            .mockRejectedValueOnce(new ApiError('Too many results.', 422));
+        const { state, pageError, submit } = useMovieSearch(search);
+        await submit('batman');
+
+        await submit('the');
+
+        expect(state.value).toEqual({ status: 'error', message: 'Too many results.' });
+        expect(pageError.value).toBeNull();
+    });
+
     it('a newer search cancels the older one and the old answer is ignored', async () => {
         const slow = deferred<SearchResponse>();
         const search = vi
