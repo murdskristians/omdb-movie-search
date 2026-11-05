@@ -87,11 +87,11 @@ All routes are under `/api`.
 | Method and path | Description |
 |-----------------|-------------|
 | `GET /api/movies?q=batman&page=1` | Search by title. `q` is required (max 100 characters), `page` is 1 to 100. Returns `data` (movies) and `meta` (`page`, `total`, `per_page`, `last_page`). A successful search with results on page 1 is added to the history. |
-| `GET /api/movies/{imdbId}` | Details of one movie. The id looks like `tt0372784`; anything else is a 404 that never reaches OMDb. |
+| `GET /api/movies/{imdbId}` | Details of one movie. The id looks like `tt0372784` (`tt` and 7 to 10 digits); anything else is a 404 that never reaches OMDb. |
 | `GET /api/history` | The last five search texts of this browser session, newest first. |
 | `DELETE /api/history` | Clears that list. |
 
-Errors are JSON, `{"message": "..."}`, with a fitting status: 404 not found, 422 invalid input or too many results, 429 request limit reached, 502 OMDb not reachable, 500 missing or invalid API key.
+Errors are JSON, `{"message": "..."}`, with a fitting status: 404 not found, 422 invalid input or too many results, 429 request limit reached, 502 OMDb not reachable, 504 OMDb too slow to answer, 500 missing or invalid API key.
 
 ## How it is built
 
@@ -119,22 +119,28 @@ resources/js/
 ## Decisions and trade-offs
 
 - **Laravel sits between the browser and OMDb.** The API key never reaches the browser, OMDb's odd answers are cleaned up in one place (most errors arrive as HTTP 200 with `"Response": "False"`, missing values are the text `"N/A"`, lists are one comma-separated string, votes contain commas), and the frontend gets stable, typed JSON.
-- **Caching.** Search answers are cached for 10 minutes and movie details for 24 hours, so repeated requests do not use up the daily OMDb limit. Failures are not cached, so a short outage does not stick. An empty search result is cached.
-- **Fail fast, retry a little.** Requests to OMDb have a 5 second timeout and are retried only after network errors and 5xx answers, never after a plain "not found".
+- **Caching.** Search answers are cached for 10 minutes and movie details for 24 hours, so repeated requests do not use up the daily OMDb limit. An empty search result is cached, and an id that does not exist is remembered for 10 minutes. Other failures are not cached, so a short outage does not stick.
+- **Timeouts and retries.** Connecting to OMDb may take 5 seconds and a whole request 10. Requests are tried a second time after network errors, timeouts and 5xx answers, never after a plain "not found". A request that is still too slow ends in a 504 with its own message. The limits are generous on purpose: on the machine where this was built, PHP needed about 1.4 seconds per OMDb request while `curl` needed 0.3, and a 5 second limit was once not enough.
 - **History lives in the session.** No accounts and no table of their own, which fits a small app. The price: it belongs to one browser, and it disappears when the session cookie is cleared or expires (`SESSION_LIFETIME` is 30 days in `.env.example`). The history routes and the search route run in Laravel's `web` middleware group, because that is what starts the session. Because `DELETE` changes data, it needs the CSRF token; Axios sends it from the `XSRF-TOKEN` cookie.
 - **What counts as a search in the history:** the first page of a search that found at least one movie. Paging, empty results and errors are not recorded. Recording happens in the controller, so answers served from the cache count too.
 - **Stale answers are ignored on the frontend.** Starting a new search or opening another movie cancels the previous request (`AbortController`), so a slow old answer cannot overwrite a newer one.
 - **Composables take their dependencies as parameters.** Tests pass in fakes, so there is no need for module mocking.
-- **Paging stops at page 100,** which is what the API accepts.
+- **Paging stops at page 100,** which is what the API accepts. If moving to another page fails, the results of the current page stay on screen and a message says so.
+- **Request limits.** The API routes allow 60 requests a minute per client, and the history routes have a limit of their own. This protects against a single noisy client, not against many clients together using up the daily OMDb quota.
 
 ## Known limitations
 
-- A movie that OMDb sends with an empty or `"N/A"` title or id would still be shown as it is. Entries with no title or id at all are skipped in search results, and the details endpoint answers 502 for them.
+- Entries that OMDb sends without a usable title or id (missing, empty, blank or `"N/A"`) are skipped in search results, and the details endpoint answers 502 for them. Other fields are shown as they come.
 - OMDb answers `"Error getting data."` for an id that does not exist. The app treats that as "not found", so a genuine glitch with the same text would also look like a 404.
+- The history is kept in the session, and sessions do not lock. Two requests of the same browser that run at the same moment can overwrite each other's session data, so a search is occasionally missing from the history. This follows from how Laravel sessions work. It was not reproduced, because `php artisan serve` handles one request at a time. Locking the session would make a slow OMDb block the next request of the same visitor, which seemed worse.
 - Search is by title only. OMDb can also filter by year and type; this app does not use that.
 - The frontend tests run in jsdom, not in a real browser. The layout was checked by hand in Chrome at 360 px and 1280 px, and nowhere else.
 - Returning focus to the card after closing the details window relies on the clicked button having focus. Some browsers (Safari, as far as I know) do not focus buttons on click, so there the focus would not return. Keyboard use is not affected.
 - `npm audit` reports moderate advisories in development tools (`minimatch`, used by ESLint and the test tooling). They do not ship with the app.
+
+## Running it for real
+
+The `.env.example` is meant for local work. For a real deployment set at least `APP_ENV=production` and `APP_DEBUG=false`. With debug on, error responses contain file paths and stack traces; with it off they contain only the message (checked with a test). Behind HTTPS also set `SESSION_SECURE_COOKIE=true`, so the session cookie is never sent over plain HTTP.
 
 ## What could come next
 
