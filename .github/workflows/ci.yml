@@ -17,7 +17,8 @@ jobs:
 
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          # composer.json asks for 8.5.12 or newer, the first release with the October 2026 security fixes.
+          php-version: '8.5'
           extensions: mbstring, pdo_sqlite, sqlite3
           coverage: none
 

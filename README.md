@@ -2,7 +2,7 @@
 
 Search movies by title, browse the results, and open the details of a movie. The app remembers your last five searches.
 
-Laravel 12 (PHP 8.2) serves a JSON API in front of the [OMDb API](https://www.omdbapi.com/). A Vue 3 + TypeScript page talks only to that API, never to OMDb directly.
+Laravel 12 (PHP 8.5) serves a JSON API in front of the [OMDb API](https://www.omdbapi.com/). A Vue 3 + TypeScript page talks only to that API, never to OMDb directly.
 
 ![Search results for "batman"](docs/screenshot.png)
 
@@ -17,7 +17,7 @@ Laravel 12 (PHP 8.2) serves a JSON API in front of the [OMDb API](https://www.om
 
 ## Requirements
 
-- PHP 8.2 or newer and [Composer](https://getcomposer.org/)
+- PHP 8.5.12 or newer and [Composer](https://getcomposer.org/). `composer.json` asks for this version, and an older PHP stops at start-up with a clear message. 8.5.12 is the first 8.5 release with the October 2026 security fixes (two critical remote-code-execution bugs, also fixed in 8.2.35, 8.3.36 and 8.4.27). The tests were run on PHP 8.5.12, and CI runs them on 8.5.
 - Node.js 22.12 or newer (Vitest 5 asks for it; Vite 7 alone needs 20.19+)
 - A free OMDb API key: <https://www.omdbapi.com/apikey.aspx>
 
@@ -120,7 +120,7 @@ resources/js/
 
 - **Laravel sits between the browser and OMDb.** The API key never reaches the browser, OMDb's odd answers are cleaned up in one place (most errors arrive as HTTP 200 with `"Response": "False"`, missing values are the text `"N/A"`, lists are one comma-separated string, votes contain commas), and the frontend gets stable, typed JSON.
 - **Caching.** Search answers are cached for 10 minutes and movie details for 24 hours, so repeated requests do not use up the daily OMDb limit. An empty search result is cached, and an id that does not exist is remembered for 10 minutes. Other failures are not cached, so a short outage does not stick.
-- **Timeouts and retries.** Connecting to OMDb may take 5 seconds and a whole request 10. Requests are tried a second time after network errors, timeouts and 5xx answers, never after a plain "not found". A request that is still too slow ends in a 504 with its own message. The limits are generous on purpose: on the machine where this was built, PHP needed about 1.4 seconds per OMDb request while `curl` needed 0.3, and a 5 second limit was once not enough.
+- **Timeouts and retries.** Connecting to OMDb may take 5 seconds and a whole request 10. Requests are tried a second time after network errors, timeouts and 5xx answers, never after a plain "not found". A request that is still too slow ends in a 504 with its own message. The limits are generous on purpose: on the machine where this was built, PHP 8.2 and 8.3 needed 1.4 to 2 seconds per OMDb request, while PHP 8.5 and the `curl` command needed about 0.3, and a 5 second limit was once not enough. The slow PHP builds came with OpenSSL 3.0 and the PHP 8.5 build with OpenSSL 3.5; whether that is the cause was not confirmed.
 - **History lives in the session.** No accounts and no table of their own, which fits a small app. The price: it belongs to one browser, and it disappears when the session cookie is cleared or expires (`SESSION_LIFETIME` is 30 days in `.env.example`). The history routes and the search route run in Laravel's `web` middleware group, because that is what starts the session. Because `DELETE` changes data, it needs the CSRF token; Axios sends it from the `XSRF-TOKEN` cookie.
 - **What counts as a search in the history:** the first page of a search that found at least one movie. Paging, empty results and errors are not recorded. Recording happens in the controller, so answers served from the cache count too.
 - **Stale answers are ignored on the frontend.** Starting a new search or opening another movie cancels the previous request (`AbortController`), so a slow old answer cannot overwrite a newer one.

@@ -12,12 +12,12 @@ class HistoryController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        return response()->json(['data' => (new SearchHistory($request->session()))->all()]);
+        return response()->json(['data' => new SearchHistory($request->session())->all()]);
     }
 
     public function destroy(Request $request): Response
     {
-        (new SearchHistory($request->session()))->clear();
+        new SearchHistory($request->session())->clear();
 
         return response()->noContent();
     }

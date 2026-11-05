@@ -11,18 +11,18 @@ use Throwable;
 class OmdbClient
 {
     /** Number of results OMDb returns on one search page. */
-    public const PAGE_SIZE = 10;
+    public const int PAGE_SIZE = 10;
 
     /** OMDb allows 1000 requests a day, so repeated searches are kept for a while. */
-    private const SEARCH_CACHE_SECONDS = 600;
+    private const int SEARCH_CACHE_SECONDS = 600;
 
     /** 24 hours */
-    private const DETAILS_CACHE_SECONDS = 86400;
+    private const int DETAILS_CACHE_SECONDS = 86400;
 
-    private const NOT_FOUND_CACHE_SECONDS = 600;
+    private const int NOT_FOUND_CACHE_SECONDS = 600;
 
     /** Stored in the cache in place of a movie when OMDb said the id does not exist. */
-    private const NOT_FOUND = 'not-found';
+    private const string NOT_FOUND = 'not-found';
 
     public function __construct(
         private readonly string $baseUrl,
@@ -177,7 +177,7 @@ class OmdbClient
                 ->retry(2, 200, $this->isTransient(...), throw: false)
                 ->get($this->baseUrl, ['apikey' => $this->apiKey, ...$params]);
         } catch (ConnectionException $e) {
-            throw new OmdbException($this->isTimeout($e) ? OmdbErrorKind::Timeout : OmdbErrorKind::Upstream, $e);
+            throw new OmdbException($this->isTimeout($e) ? OmdbErrorKind::Timeout : OmdbErrorKind::Upstream, $this->withoutKey($e));
         }
 
         $body = $response->json();
@@ -198,6 +198,19 @@ class OmdbClient
     {
         return $e instanceof ConnectionException
             || ($e instanceof RequestException && $e->response->serverError());
+    }
+
+    /**
+     * cURL writes the whole address into its error message, and the API key is part of that address.
+     * Without this copy the key would end up in the log. The copy keeps the message but not the key,
+     * and drops the original exception, which carries the same text.
+     */
+    private function withoutKey(ConnectionException $e): ConnectionException
+    {
+        $key = (string) $this->apiKey;
+        $message = $key === '' ? $e->getMessage() : str_replace([$key, rawurlencode($key)], '<hidden>', $e->getMessage());
+
+        return new ConnectionException($message, $e->getCode());
     }
 
     /** cURL reports a slow answer as error 28, which Laravel passes on in the message. */
@@ -269,7 +282,7 @@ class OmdbClient
     {
         $value = $this->nullIfMissing($value);
 
-        return $value === null ? [] : array_map('trim', explode(',', $value));
+        return $value === null ? [] : array_map(trim(...), explode(',', $value));
     }
 
     /**

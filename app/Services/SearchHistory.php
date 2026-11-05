@@ -7,9 +7,9 @@ use Illuminate\Contracts\Session\Session;
 /** The visitor's most recent search queries, kept in their session. */
 class SearchHistory
 {
-    public const LIMIT = 5;
+    public const int LIMIT = 5;
 
-    private const KEY = 'search_history';
+    private const string KEY = 'search_history';
 
     public function __construct(private readonly Session $session) {}
 

@@ -14,7 +14,7 @@ use Tests\TestCase;
 
 class OmdbClientTest extends TestCase
 {
-    private const BASE_URL = 'https://www.omdbapi.com/';
+    private const string BASE_URL = 'https://www.omdbapi.com/';
 
     protected function setUp(): void
     {
@@ -206,6 +206,37 @@ class OmdbClientTest extends TestCase
         } catch (OmdbException $e) {
             $this->assertSame(OmdbErrorKind::Timeout, $e->kind);
             $this->assertInstanceOf(ConnectionException::class, $e->getPrevious());
+        }
+    }
+
+    public function test_the_api_key_does_not_end_up_in_the_exception_of_a_failed_connection(): void
+    {
+        Http::fake(fn () => throw new ConnectionException(
+            'cURL error 28: Operation timed out after 10001 milliseconds for https://www.omdbapi.com/?apikey=test-key&s=batman',
+        ));
+
+        try {
+            $this->client()->search('batman');
+            $this->fail('Expected an OmdbException.');
+        } catch (OmdbException $e) {
+            // The whole text of the exception: message, the exceptions it carries, and the trace.
+            $this->assertStringNotContainsString('test-key', (string) $e);
+            $this->assertStringContainsString('apikey=<hidden>', (string) $e->getPrevious()?->getMessage());
+        }
+    }
+
+    public function test_a_key_with_special_characters_is_hidden_in_its_address_form_too(): void
+    {
+        Http::fake(fn () => throw new ConnectionException(
+            'cURL error 7: Failed to connect for https://www.omdbapi.com/?apikey=a%20b%26c&s=batman',
+        ));
+
+        try {
+            new OmdbClient(self::BASE_URL, 'a b&c')->search('batman');
+            $this->fail('Expected an OmdbException.');
+        } catch (OmdbException $e) {
+            $this->assertStringNotContainsString('a%20b%26c', (string) $e);
+            $this->assertSame(OmdbErrorKind::Upstream, $e->kind);
         }
     }
 

@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 class OmdbClientFindTest extends TestCase
 {
-    private const BASE_URL = 'https://www.omdbapi.com/';
+    private const string BASE_URL = 'https://www.omdbapi.com/';
 
     protected function setUp(): void
     {
