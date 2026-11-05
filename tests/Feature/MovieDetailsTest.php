@@ -96,6 +96,8 @@ class MovieDetailsTest extends TestCase
             'no prefix' => ['0372784'],
             'a word' => ['batman'],
             'upper case prefix' => ['TT0372784'],
+            'too few digits' => ['tt123456'],
+            'too many digits' => ['tt12345678901'],
         ];
     }
 
@@ -116,6 +118,25 @@ class MovieDetailsTest extends TestCase
         $this->getJson('/api/movies/tt0372784')
             ->assertStatus(502)
             ->assertExactJson(['message' => 'The movie service is currently unavailable.']);
+    }
+
+    public function test_a_slow_omdb_is_a_504(): void
+    {
+        Http::fake(fn () => throw new ConnectionException('cURL error 28: Operation timed out after 10001 milliseconds'));
+
+        $this->getJson('/api/movies/tt0372784')
+            ->assertStatus(504)
+            ->assertExactJson(['message' => 'The movie service took too long to answer. Please try again.']);
+    }
+
+    public function test_asking_again_for_an_unknown_id_does_not_call_omdb_again(): void
+    {
+        Http::fake(['www.omdbapi.com/*' => Http::response(['Response' => 'False', 'Error' => 'Error getting data.'])]);
+
+        $this->getJson('/api/movies/tt9999999')->assertNotFound();
+        $this->getJson('/api/movies/tt9999999')->assertNotFound();
+
+        Http::assertSentCount(1);
     }
 
     public function test_searching_still_works_next_to_the_details_route(): void

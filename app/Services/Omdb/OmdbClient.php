@@ -19,6 +19,11 @@ class OmdbClient
     /** 24 hours */
     private const DETAILS_CACHE_SECONDS = 86400;
 
+    private const NOT_FOUND_CACHE_SECONDS = 600;
+
+    /** Stored in the cache in place of a movie when OMDb said the id does not exist. */
+    private const NOT_FOUND = 'not-found';
+
     public function __construct(
         private readonly string $baseUrl,
         private readonly ?string $apiKey,
@@ -94,12 +99,33 @@ class OmdbClient
      */
     public function find(string $imdbId): array
     {
-        // A movie's details hardly ever change. Failures (unknown id, OMDb down) are not stored.
-        return Cache::remember(
-            'omdb:movie:'.$imdbId,
-            self::DETAILS_CACHE_SECONDS,
-            fn () => $this->fetchDetails($imdbId),
-        );
+        $key = 'omdb:movie:'.$imdbId;
+        $cached = Cache::get($key);
+
+        if ($cached === self::NOT_FOUND) {
+            throw new OmdbException(OmdbErrorKind::NotFound);
+        }
+
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        try {
+            $movie = $this->fetchDetails($imdbId);
+        } catch (OmdbException $e) {
+            // An id that does not exist is remembered for a short while, so asking again does not cost a request.
+            // Other failures (OMDb down, bad key) are not stored.
+            if ($e->kind === OmdbErrorKind::NotFound) {
+                Cache::put($key, self::NOT_FOUND, self::NOT_FOUND_CACHE_SECONDS);
+            }
+
+            throw $e;
+        }
+
+        // A movie's details hardly ever change.
+        Cache::put($key, $movie, self::DETAILS_CACHE_SECONDS);
+
+        return $movie;
     }
 
     /** @throws OmdbException */
@@ -146,11 +172,12 @@ class OmdbClient
     private function request(array $params): array
     {
         try {
-            $response = Http::timeout(5)
+            $response = Http::connectTimeout(5)
+                ->timeout(10)
                 ->retry(2, 200, $this->isTransient(...), throw: false)
                 ->get($this->baseUrl, ['apikey' => $this->apiKey, ...$params]);
         } catch (ConnectionException $e) {
-            throw new OmdbException(OmdbErrorKind::Upstream, $e);
+            throw new OmdbException($this->isTimeout($e) ? OmdbErrorKind::Timeout : OmdbErrorKind::Upstream, $e);
         }
 
         $body = $response->json();
@@ -171,6 +198,12 @@ class OmdbClient
     {
         return $e instanceof ConnectionException
             || ($e instanceof RequestException && $e->response->serverError());
+    }
+
+    /** cURL reports a slow answer as error 28, which Laravel passes on in the message. */
+    private function isTimeout(ConnectionException $e): bool
+    {
+        return str_contains($e->getMessage(), 'cURL error 28');
     }
 
     /** OMDb reports most errors with HTTP 200, so the message text is all we have. */
@@ -217,8 +250,14 @@ class OmdbClient
     private function hasIdentity(mixed $item): bool
     {
         return is_array($item)
-            && is_string($item['imdbID'] ?? null)
-            && is_string($item['Title'] ?? null);
+            && $this->isFilled($item['imdbID'] ?? null)
+            && $this->isFilled($item['Title'] ?? null);
+    }
+
+    /** Text with something in it: not missing, not blank and not OMDb's "N/A". */
+    private function isFilled(mixed $value): bool
+    {
+        return is_string($value) && $this->nullIfMissing(trim($value)) !== null;
     }
 
     /**

@@ -41,6 +41,15 @@ class ApiErrorResponseTest extends TestCase
             ->assertExactJson(['message' => $expectedMessage]);
     }
 
+    public function test_a_slow_omdb_is_a_504_with_its_own_message(): void
+    {
+        Http::fake(fn () => throw new ConnectionException('cURL error 28: Operation timed out after 10001 milliseconds'));
+
+        $this->getJson('/api/movies?q=batman')
+            ->assertStatus(504)
+            ->assertExactJson(['message' => 'The movie service took too long to answer. Please try again.']);
+    }
+
     public function test_unreachable_omdb_is_a_502(): void
     {
         Http::fake(fn () => throw new ConnectionException('Connection refused'));

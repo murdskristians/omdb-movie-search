@@ -18,6 +18,7 @@ class OmdbExceptionTest extends TestCase
             'rate limited' => [OmdbErrorKind::RateLimited, 429],
             'invalid key' => [OmdbErrorKind::InvalidKey, 500],
             'upstream' => [OmdbErrorKind::Upstream, 502],
+            'timeout' => [OmdbErrorKind::Timeout, 504],
         ];
     }
 

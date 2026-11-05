@@ -9,5 +9,6 @@ use Illuminate\Support\Facades\Route;
 // the web group starts a session, so this route gets it on top of the api group.
 Route::middleware('web')->get('/movies', [MovieController::class, 'index']);
 
-// IMDb ids look like tt0372784. Anything else does not match the route and gets a 404 without calling OMDb.
-Route::get('/movies/{imdbId}', [MovieController::class, 'show'])->where('imdbId', 'tt\d+');
+// IMDb ids look like tt0372784: "tt" and 7 to 10 digits. Anything else does not match the route and
+// gets a 404 without calling OMDb.
+Route::get('/movies/{imdbId}', [MovieController::class, 'show'])->where('imdbId', 'tt\d{7,10}');

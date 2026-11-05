@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class HistoryTest extends TestCase
@@ -36,6 +37,27 @@ class HistoryTest extends TestCase
         $this->deleteJson('/api/history')->assertNoContent();
 
         $this->getJson('/api/history')->assertExactJson(['data' => []]);
+    }
+
+    public function test_history_requests_are_limited_to_60_a_minute(): void
+    {
+        for ($i = 0; $i < 60; $i++) {
+            $this->getJson('/api/history')->assertOk();
+        }
+
+        $this->getJson('/api/history')->assertStatus(429);
+        $this->deleteJson('/api/history')->assertStatus(429);
+    }
+
+    public function test_history_requests_do_not_use_up_the_search_limit(): void
+    {
+        Http::fake(['www.omdbapi.com/*' => Http::response(['Search' => [], 'totalResults' => '0', 'Response' => 'True'])]);
+
+        for ($i = 0; $i < 60; $i++) {
+            $this->getJson('/api/history')->assertOk();
+        }
+
+        $this->getJson('/api/movies?q=batman')->assertOk();
     }
 
     public function test_the_response_starts_a_session_and_hands_out_the_csrf_cookie(): void

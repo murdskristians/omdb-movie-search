@@ -196,6 +196,29 @@ class OmdbClientTest extends TestCase
         }
     }
 
+    public function test_a_slow_answer_becomes_a_timeout_error(): void
+    {
+        Http::fake(fn () => throw new ConnectionException('cURL error 28: Operation timed out after 10001 milliseconds with 0 bytes received'));
+
+        try {
+            $this->client()->search('batman');
+            $this->fail('Expected an OmdbException.');
+        } catch (OmdbException $e) {
+            $this->assertSame(OmdbErrorKind::Timeout, $e->kind);
+            $this->assertInstanceOf(ConnectionException::class, $e->getPrevious());
+        }
+    }
+
+    public function test_a_slow_answer_is_tried_again(): void
+    {
+        Http::fake([self::BASE_URL.'*' => Http::sequence()
+            ->pushFailedConnection('cURL error 28: Operation timed out')
+            ->push(['Search' => [], 'totalResults' => '0', 'Response' => 'True'])]);
+
+        $this->assertSame(['items' => [], 'total' => 0], $this->client()->search('batman'));
+        Http::assertSentCount(2);
+    }
+
     public function test_retries_after_a_server_error(): void
     {
         Http::fake([
@@ -237,9 +260,14 @@ class OmdbClientTest extends TestCase
             ['Title' => 'Batman Begins', 'Year' => '2005', 'imdbID' => 'tt0372784', 'Type' => 'movie', 'Poster' => 'N/A'],
             ['Year' => '2006', 'imdbID' => 'tt0000002', 'Type' => 'movie', 'Poster' => 'N/A'],
             ['Title' => 'No id', 'Year' => '2007', 'Type' => 'movie', 'Poster' => 'N/A'],
+            ['Title' => '', 'Year' => '2007', 'imdbID' => 'tt0000003', 'Type' => 'movie', 'Poster' => 'N/A'],
+            ['Title' => '   ', 'Year' => '2007', 'imdbID' => 'tt0000004', 'Type' => 'movie', 'Poster' => 'N/A'],
+            ['Title' => 'N/A', 'Year' => '2007', 'imdbID' => 'tt0000005', 'Type' => 'movie', 'Poster' => 'N/A'],
+            ['Title' => 'Empty id', 'Year' => '2007', 'imdbID' => '', 'Type' => 'movie', 'Poster' => 'N/A'],
+            ['Title' => 'N/A id', 'Year' => '2007', 'imdbID' => 'N/A', 'Type' => 'movie', 'Poster' => 'N/A'],
             'not even an entry',
             ['Title' => 'The Dark Knight', 'Year' => '2008', 'imdbID' => 'tt0468569', 'Type' => 'movie', 'Poster' => 'N/A'],
-        ], '5');
+        ], '11');
 
         $titles = array_column($this->client()->search('batman')['items'], 'title');
 

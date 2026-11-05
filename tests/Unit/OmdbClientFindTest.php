@@ -186,10 +186,10 @@ class OmdbClientFindTest extends TestCase
         Http::assertSentCount(2);
     }
 
-    public function test_failures_are_not_cached(): void
+    public function test_failures_other_than_not_found_are_not_cached(): void
     {
         Http::fake([self::BASE_URL.'*' => Http::sequence()
-            ->push(['Response' => 'False', 'Error' => 'Error getting data.'])
+            ->push(['Response' => 'False', 'Error' => 'Something unexpected'])
             ->push($this->batmanBegins())]);
 
         try {
@@ -211,16 +211,63 @@ class OmdbClientFindTest extends TestCase
         $this->assertSame('', $movie['type']);
     }
 
-    /** @return array<string, array{string}> */
-    public static function essentialFields(): array
+    public function test_an_unknown_id_is_remembered_for_a_short_while(): void
     {
-        return ['id' => ['imdbID'], 'title' => ['Title']];
+        Http::fake([self::BASE_URL.'*' => Http::sequence()
+            ->push(['Response' => 'False', 'Error' => 'Error getting data.'])
+            ->push($this->batmanBegins())]);
+
+        foreach ([1, 2] as $attempt) {
+            try {
+                $this->client()->find('tt0372784');
+                $this->fail('Expected an OmdbException.');
+            } catch (OmdbException $e) {
+                $this->assertSame(OmdbErrorKind::NotFound, $e->kind);
+            }
+        }
+
+        Http::assertSentCount(1);
     }
 
-    #[DataProvider('essentialFields')]
-    public function test_an_answer_without_an_id_or_a_title_is_an_upstream_error(string $field): void
+    public function test_an_unknown_id_is_asked_for_again_after_that_time(): void
     {
-        Http::fake([self::BASE_URL.'*' => Http::response(array_diff_key($this->batmanBegins(), [$field => 1]))]);
+        Http::fake([self::BASE_URL.'*' => Http::sequence()
+            ->push(['Response' => 'False', 'Error' => 'Error getting data.'])
+            ->push($this->batmanBegins())]);
+
+        try {
+            $this->client()->find('tt0372784');
+        } catch (OmdbException) {
+        }
+
+        $this->travel(11)->minutes();
+
+        $this->assertSame('Batman Begins', $this->client()->find('tt0372784')['title']);
+    }
+
+    /** @return array<string, array{string, mixed}> */
+    public static function unusableEssentialFields(): array
+    {
+        return [
+            'missing id' => ['imdbID', null],
+            'empty id' => ['imdbID', ''],
+            'blank id' => ['imdbID', '   '],
+            'id N/A' => ['imdbID', 'N/A'],
+            'missing title' => ['Title', null],
+            'empty title' => ['Title', ''],
+            'blank title' => ['Title', '   '],
+            'title N/A' => ['Title', 'N/A'],
+            'title that is not text' => ['Title', 123],
+        ];
+    }
+
+    #[DataProvider('unusableEssentialFields')]
+    public function test_an_answer_without_a_usable_id_or_title_is_an_upstream_error(string $field, mixed $value): void
+    {
+        $answer = $value === null
+            ? array_diff_key($this->batmanBegins(), [$field => 1])
+            : array_merge($this->batmanBegins(), [$field => $value]);
+        Http::fake([self::BASE_URL.'*' => Http::response($answer)]);
 
         try {
             $this->client()->find('tt0372784');
