@@ -1,7 +1,7 @@
 import { AxiosError, type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { SearchResponse } from '../types/movie';
-import { ApiError, clearHistory, getHistory, http, searchMovies } from './client';
+import { ApiError, clearHistory, getHistory, getMovie, http, searchMovies } from './client';
 
 const originalAdapter = http.defaults.adapter;
 
@@ -66,6 +66,34 @@ describe('searchMovies', () => {
 
         expect(error).toBeInstanceOf(ApiError);
         expect(error).toMatchObject({ status: null });
+    });
+});
+
+describe('getMovie', () => {
+    afterEach(() => {
+        http.defaults.adapter = originalAdapter;
+    });
+
+    it('asks GET /api/movies/{id} and returns the movie inside data', async () => {
+        const movie = { imdb_id: 'tt0372784', title: 'Batman Begins' };
+        let sent: InternalAxiosRequestConfig | undefined;
+        http.defaults.adapter = (config) => {
+            sent = config;
+
+            return respondWith(200, { data: movie })(config);
+        };
+
+        const result = await getMovie('tt0372784');
+
+        expect(result).toEqual(movie);
+        expect(sent?.method).toBe('get');
+        expect(sent?.url).toBe('/movies/tt0372784');
+    });
+
+    it('turns a 404 into an ApiError with the server message', async () => {
+        http.defaults.adapter = respondWith(404, { message: 'Movie not found.' });
+
+        await expect(getMovie('tt9999999')).rejects.toMatchObject({ message: 'Movie not found.', status: 404 });
     });
 });
 

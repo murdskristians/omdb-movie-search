@@ -1,5 +1,5 @@
 import axios, { isAxiosError } from 'axios';
-import type { HistoryResponse, SearchResponse } from '../types/movie';
+import type { DetailsResponse, HistoryResponse, MovieDetails, SearchResponse } from '../types/movie';
 
 export class ApiError extends Error {
     /** HTTP status, or null when the server could not be reached at all. */
@@ -51,6 +51,16 @@ export async function getHistory(): Promise<string[]> {
 export async function clearHistory(): Promise<void> {
     try {
         await http.delete('/history');
+    } catch (error) {
+        throw toApiError(error);
+    }
+}
+
+export async function getMovie(imdbId: string, signal?: AbortSignal): Promise<MovieDetails> {
+    try {
+        const { data } = await http.get<DetailsResponse>(`/movies/${encodeURIComponent(imdbId)}`, { signal });
+
+        return data.data;
     } catch (error) {
         throw toApiError(error);
     }
