@@ -21,6 +21,16 @@ describe('MovieList', () => {
         expect(cards[1]?.text()).toContain('The Dark Knight');
     });
 
+    it('passes on the id of the card that was clicked', async () => {
+        const wrapper = mount(MovieList, {
+            props: { movies: [movie('tt1', 'Batman Begins'), movie('tt2', 'The Dark Knight')] },
+        });
+
+        await wrapper.findAll('button')[1]!.trigger('click');
+
+        expect(wrapper.emitted('select')).toEqual([['tt2']]);
+    });
+
     it('shows a placeholder only for movies without a poster', () => {
         const wrapper = mount(MovieList, {
             props: {
