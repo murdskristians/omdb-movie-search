@@ -2,7 +2,7 @@
 import { computed, onMounted } from 'vue';
 import MovieDetailsModal from './components/MovieDetailsModal.vue';
 import MovieList from './components/MovieList.vue';
-import Pagination from './components/Pagination.vue';
+import PaginationNav from './components/PaginationNav.vue';
 import SearchForm from './components/SearchForm.vue';
 import SearchHistory from './components/SearchHistory.vue';
 import StatusMessage from './components/StatusMessage.vue';
@@ -20,7 +20,9 @@ const { items: recentSearches, refresh: refreshHistory, clear: clearHistory } = 
 
 const { state: details, open: openDetails, close: closeDetails } = useMovieDetails();
 
-const lastPage = computed(() => (state.value.status === 'success' ? Math.min(state.value.meta.last_page, MAX_PAGE) : 1));
+const lastPage = computed(() =>
+    state.value.status === 'success' ? Math.min(state.value.meta.last_page, MAX_PAGE) : 1,
+);
 
 onMounted(refreshHistory);
 
@@ -39,7 +41,7 @@ async function search(text: string): Promise<void> {
         <StatusMessage :state="state" :query="query" />
         <template v-if="state.status === 'success'">
             <MovieList :movies="state.movies" class="mt-8" @select="openDetails" />
-            <Pagination :page="page" :last-page="lastPage" class="mt-8" @change="goToPage" />
+            <PaginationNav :page="page" :last-page="lastPage" class="mt-8" @change="goToPage" />
         </template>
         <MovieDetailsModal :state="details" @close="closeDetails" />
     </main>

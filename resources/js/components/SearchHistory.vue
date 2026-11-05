@@ -18,6 +18,8 @@ const emit = defineEmits<{ select: [text: string]; clear: [] }>();
                 </button>
             </li>
         </ul>
-        <button type="button" class="min-h-11 px-2 text-sm text-gray-600 underline" @click="emit('clear')">Clear</button>
+        <button type="button" class="min-h-11 px-2 text-sm text-gray-600 underline" @click="emit('clear')">
+            Clear
+        </button>
     </section>
 </template>

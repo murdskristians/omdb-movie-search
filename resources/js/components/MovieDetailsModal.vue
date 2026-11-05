@@ -113,14 +113,19 @@ function formatVotes(votes: number): string {
                     <p class="text-gray-600">{{ summaryLine(state.movie) }}</p>
 
                     <ul v-if="state.movie.genres.length > 0" class="mt-3 flex flex-wrap gap-2">
-                        <li v-for="genre in state.movie.genres" :key="genre" class="rounded-full bg-gray-100 px-3 py-1 text-sm">
+                        <li
+                            v-for="genre in state.movie.genres"
+                            :key="genre"
+                            class="rounded-full bg-gray-100 px-3 py-1 text-sm"
+                        >
                             {{ genre }}
                         </li>
                     </ul>
 
                     <p class="mt-4">
                         <template v-if="state.movie.imdb_rating !== null">
-                            IMDb rating: <strong>{{ state.movie.imdb_rating }}</strong>/10
+                            IMDb rating: <strong>{{ state.movie.imdb_rating }}</strong
+                            >/10
                             <span v-if="state.movie.imdb_votes !== null" class="text-gray-600">
                                 ({{ formatVotes(state.movie.imdb_votes) }} votes)
                             </span>

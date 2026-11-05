@@ -38,7 +38,11 @@ describe('StatusMessage', () => {
     });
 
     it('keeps the live region in the page even when there is nothing to say', () => {
-        const wrapper = show({ status: 'success', movies: [], meta: { page: 1, total: 0, per_page: 10, last_page: 1 } });
+        const wrapper = show({
+            status: 'success',
+            movies: [],
+            meta: { page: 1, total: 0, per_page: 10, last_page: 1 },
+        });
 
         expect(wrapper.find('[aria-live="polite"]').exists()).toBe(true);
     });

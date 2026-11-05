@@ -100,7 +100,10 @@ describe('MovieDetailsModal', () => {
 
     it('lists the other ratings but not the IMDb one a second time', () => {
         const wrapper = show({ status: 'success', movie: movie() });
-        const items = wrapper.findAll('ul')[1]!.findAll('li').map((li) => li.text());
+        const items = wrapper
+            .findAll('ul')[1]!
+            .findAll('li')
+            .map((li) => li.text());
 
         expect(items).toEqual(['Rotten Tomatoes: 85%']);
     });

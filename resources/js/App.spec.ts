@@ -7,8 +7,20 @@ import type { MovieDetails, MovieSummary } from './types/movie';
 
 const originalAdapter = http.defaults.adapter;
 
-const begins: MovieSummary = { imdb_id: 'tt0372784', title: 'Batman Begins', year: '2005', type: 'movie', poster: null };
-const darkKnight: MovieSummary = { imdb_id: 'tt0468569', title: 'The Dark Knight', year: '2008', type: 'movie', poster: null };
+const begins: MovieSummary = {
+    imdb_id: 'tt0372784',
+    title: 'Batman Begins',
+    year: '2005',
+    type: 'movie',
+    poster: null,
+};
+const darkKnight: MovieSummary = {
+    imdb_id: 'tt0468569',
+    title: 'The Dark Knight',
+    year: '2008',
+    type: 'movie',
+    poster: null,
+};
 
 const beginsDetails: MovieDetails = {
     ...begins,
@@ -40,7 +52,9 @@ class FakeApi {
     adapter: AxiosAdapter = (config) => {
         const method = (config.method ?? 'get').toUpperCase();
         const url = config.url ?? '';
-        this.requests.push(`${method} ${url}${config.params ? `?q=${config.params.q}&page=${config.params.page}` : ''}`);
+        this.requests.push(
+            `${method} ${url}${config.params ? `?q=${config.params.q}&page=${config.params.page}` : ''}`,
+        );
 
         const [status, data] = this.answer(method, url, config);
         const response = { data, status, statusText: '', headers: {}, config };
@@ -115,7 +129,8 @@ function buttonWithText(wrapper: VueWrapper, text: string) {
 }
 
 const titles = (wrapper: VueWrapper) => wrapper.findAll('article h2').map((title) => title.text());
-const chips = (wrapper: VueWrapper) => wrapper.findAll('section[aria-label="Recent searches"] li').map((chip) => chip.text());
+const chips = (wrapper: VueWrapper) =>
+    wrapper.findAll('section[aria-label="Recent searches"] li').map((chip) => chip.text());
 const status = (wrapper: VueWrapper) => wrapper.find('[role="status"]').text();
 
 describe('App', () => {
