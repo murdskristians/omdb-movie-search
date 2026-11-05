@@ -1,5 +1,5 @@
-import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { mount, type VueWrapper } from '@vue/test-utils';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { DetailsState } from '../composables/useMovieDetails';
 import type { MovieDetails } from '../types/movie';
 import MovieDetailsModal from './MovieDetailsModal.vue';
@@ -29,8 +29,26 @@ function movie(overrides: Partial<MovieDetails> = {}): MovieDetails {
     };
 }
 
+const mounted: VueWrapper[] = [];
+
+// Attached to the page, so focus and keyboard events behave as in a browser.
 function show(state: DetailsState) {
-    return mount(MovieDetailsModal, { props: { state } });
+    const wrapper = mount(MovieDetailsModal, { props: { state }, attachTo: document.body });
+    mounted.push(wrapper);
+
+    return wrapper;
+}
+
+afterEach(() => {
+    mounted.splice(0).forEach((wrapper) => wrapper.unmount());
+    document.body.innerHTML = '';
+});
+
+function press(key: string, options: KeyboardEventInit = {}): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...options });
+    document.dispatchEvent(event);
+
+    return event;
 }
 
 describe('MovieDetailsModal', () => {
@@ -131,5 +149,109 @@ describe('MovieDetailsModal', () => {
         await wrapper.find('button').trigger('click');
 
         expect(wrapper.emitted('close')).toHaveLength(1);
+    });
+});
+
+describe('MovieDetailsModal keyboard and screen reader support', () => {
+    const success: DetailsState = { status: 'success', movie: movie() };
+
+    it('is announced as a modal dialog with a name', () => {
+        const dialog = show(success).find('[role="dialog"]');
+
+        expect(dialog.attributes('aria-modal')).toBe('true');
+        expect(dialog.attributes('aria-label')).toBe('Movie details');
+    });
+
+    it('closes with the Escape key', () => {
+        const wrapper = show(success);
+
+        press('Escape');
+
+        expect(wrapper.emitted('close')).toHaveLength(1);
+    });
+
+    it('ignores other keys', () => {
+        const wrapper = show(success);
+
+        press('a');
+        press('Enter');
+
+        expect(wrapper.emitted('close')).toBeUndefined();
+    });
+
+    it('stops listening to the keyboard once it is closed', async () => {
+        const wrapper = show(success);
+
+        await wrapper.setProps({ state: { status: 'idle' } });
+        press('Escape');
+
+        expect(wrapper.emitted('close')).toBeUndefined();
+    });
+
+    it('closes when the dark background is clicked, but not when the window itself is', async () => {
+        const wrapper = show(success);
+
+        await wrapper.find('[role="dialog"]').trigger('click');
+        expect(wrapper.emitted('close')).toBeUndefined();
+
+        await wrapper.find('.fixed').trigger('click');
+        expect(wrapper.emitted('close')).toHaveLength(1);
+    });
+
+    it('moves the keyboard focus into the window when it opens', async () => {
+        const wrapper = show({ status: 'idle' });
+
+        await wrapper.setProps({ state: { status: 'loading' } });
+        await wrapper.vm.$nextTick();
+
+        expect(document.activeElement).toBe(wrapper.find('[role="dialog"]').element);
+    });
+
+    it('gives the focus back to the card that opened it', async () => {
+        const card = document.createElement('button');
+        document.body.appendChild(card);
+        card.focus();
+        const wrapper = show({ status: 'idle' });
+
+        await wrapper.setProps({ state: { status: 'loading' } });
+        await wrapper.vm.$nextTick();
+        expect(document.activeElement).not.toBe(card);
+
+        await wrapper.setProps({ state: { status: 'idle' } });
+
+        expect(document.activeElement).toBe(card);
+    });
+
+    it('keeps Tab inside the window: from the last element to the first', () => {
+        const wrapper = show(success);
+        const close = wrapper.find('button').element;
+        const link = wrapper.find('a').element;
+        link.focus();
+
+        const event = press('Tab');
+
+        expect(event.defaultPrevented).toBe(true);
+        expect(document.activeElement).toBe(close);
+    });
+
+    it('keeps Shift+Tab inside the window: from the first element to the last', () => {
+        const wrapper = show(success);
+        const close = wrapper.find('button').element;
+        const link = wrapper.find('a').element;
+        close.focus();
+
+        const event = press('Tab', { shiftKey: true });
+
+        expect(event.defaultPrevented).toBe(true);
+        expect(document.activeElement).toBe(link);
+    });
+
+    it('lets Tab move on normally when the focus is not on the last element', () => {
+        const wrapper = show(success);
+        wrapper.find('button').element.focus();
+
+        const event = press('Tab');
+
+        expect(event.defaultPrevented).toBe(false);
     });
 });
