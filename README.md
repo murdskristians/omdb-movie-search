@@ -78,6 +78,8 @@ Without `npm run dev` you can build the frontend once with `npm run build` and r
 
 No test calls the real OMDb. PHP tests use `Http::fake()`, and the frontend tests replace the network with a fake API.
 
+A GitHub Actions workflow (`.github/workflows/ci.yml`) runs the PHP checks (`pint --test`, `php artisan test`) and the frontend checks (`typecheck`, `lint`, `format:check`, `test`, `build`) on every push to `main` and on every pull request.
+
 ## API
 
 All routes are under `/api`.
@@ -138,5 +140,4 @@ resources/js/
 
 - Filters for year and type, and a link that opens the details of a movie directly.
 - Browser end-to-end tests, for example with Playwright.
-- A GitHub Actions workflow that runs the checks above on every push.
 - Docker or Sail for a one-command setup.
