@@ -2,8 +2,8 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "laravel/laravel",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "Search movies by title with the OMDb API: a Laravel JSON API and a Vue 3 frontend.",
+    "keywords": ["laravel", "vue", "omdb", "movies"],
     "license": "MIT",
     "require": {
         "php": "^8.2",
