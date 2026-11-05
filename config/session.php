@@ -118,6 +118,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Session Serialization
+    |--------------------------------------------------------------------------
+    |
+    | The session only holds plain arrays and text (the recent searches), so it
+    | is stored as JSON. Unlike PHP's own format, JSON can never rebuild objects,
+    | which blocks deserialization attacks if the application key ever leaks.
+    | Changing this logs every visitor out once.
+    |
+    */
+
+    'serialization' => 'json',
+
+    /*
+    |--------------------------------------------------------------------------
     | Session Cookie Name
     |--------------------------------------------------------------------------
     |

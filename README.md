@@ -2,7 +2,7 @@
 
 Search movies by title, browse the results, and open the details of a movie. The app remembers your last five searches.
 
-Laravel 12 (PHP 8.5) serves a JSON API in front of the [OMDb API](https://www.omdbapi.com/). A Vue 3 + TypeScript page talks only to that API, never to OMDb directly.
+Laravel 13 (PHP 8.5) serves a JSON API in front of the [OMDb API](https://www.omdbapi.com/). A Vue 3 + TypeScript page talks only to that API, never to OMDb directly.
 
 ![Search results for "batman"](docs/screenshot.png)
 
@@ -18,7 +18,7 @@ Laravel 12 (PHP 8.5) serves a JSON API in front of the [OMDb API](https://www.om
 ## Requirements
 
 - PHP 8.5.12 or newer and [Composer](https://getcomposer.org/). `composer.json` asks for this version, and an older PHP stops at start-up with a clear message. 8.5.12 is the first 8.5 release with the October 2026 security fixes (two critical remote-code-execution bugs, also fixed in 8.2.35, 8.3.36 and 8.4.27). The tests were run on PHP 8.5.12, and CI runs them on 8.5.
-- Node.js 22.12 or newer (Vitest 5 asks for it; Vite 7 alone needs 20.19+)
+- Node.js 22.12 or newer (Vitest 5 asks for it; Vite 8 alone needs 20.19+)
 - A free OMDb API key: <https://www.omdbapi.com/apikey.aspx>
 
 SQLite is used for sessions and the cache, so no database server is needed.

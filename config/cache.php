@@ -114,4 +114,18 @@ return [
 
     'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Serializable Classes
+    |--------------------------------------------------------------------------
+    |
+    | This application only caches plain arrays and text, never objects. With
+    | false, cached values can never be turned back into objects, which blocks
+    | deserialization attacks if the application key ever leaks. List the
+    | classes here if objects are ever put in the cache.
+    |
+    */
+
+    'serializable_classes' => false,
+
 ];
