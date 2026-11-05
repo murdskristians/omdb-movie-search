@@ -13,6 +13,10 @@ export interface PageMeta {
     last_page: number;
 }
 
+export interface HistoryResponse {
+    data: string[];
+}
+
 export interface SearchResponse {
     data: MovieSummary[];
     meta: PageMeta;

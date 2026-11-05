@@ -1,5 +1,5 @@
 import axios, { isAxiosError } from 'axios';
-import type { SearchResponse } from '../types/movie';
+import type { HistoryResponse, SearchResponse } from '../types/movie';
 
 export class ApiError extends Error {
     /** HTTP status, or null when the server could not be reached at all. */
@@ -36,6 +36,24 @@ function toApiError(error: unknown): unknown {
     }
 
     return new ApiError('Cannot reach the server. Check your connection and try again.', null);
+}
+
+export async function getHistory(): Promise<string[]> {
+    try {
+        const { data } = await http.get<HistoryResponse>('/history');
+
+        return data.data;
+    } catch (error) {
+        throw toApiError(error);
+    }
+}
+
+export async function clearHistory(): Promise<void> {
+    try {
+        await http.delete('/history');
+    } catch (error) {
+        throw toApiError(error);
+    }
 }
 
 export async function searchMovies(query: string, page: number, signal?: AbortSignal): Promise<SearchResponse> {

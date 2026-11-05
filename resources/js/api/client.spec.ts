@@ -1,7 +1,7 @@
 import { AxiosError, type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { SearchResponse } from '../types/movie';
-import { ApiError, http, searchMovies } from './client';
+import { ApiError, clearHistory, getHistory, http, searchMovies } from './client';
 
 const originalAdapter = http.defaults.adapter;
 
@@ -66,5 +66,46 @@ describe('searchMovies', () => {
 
         expect(error).toBeInstanceOf(ApiError);
         expect(error).toMatchObject({ status: null });
+    });
+});
+
+describe('history requests', () => {
+    afterEach(() => {
+        http.defaults.adapter = originalAdapter;
+    });
+
+    it('getHistory asks GET /api/history and returns the list', async () => {
+        let sent: InternalAxiosRequestConfig | undefined;
+        http.defaults.adapter = (config) => {
+            sent = config;
+
+            return respondWith(200, { data: ['matrix', 'batman'] })(config);
+        };
+
+        const result = await getHistory();
+
+        expect(result).toEqual(['matrix', 'batman']);
+        expect(sent?.method).toBe('get');
+        expect(sent?.url).toBe('/history');
+    });
+
+    it('clearHistory sends DELETE /api/history', async () => {
+        let sent: InternalAxiosRequestConfig | undefined;
+        http.defaults.adapter = (config) => {
+            sent = config;
+
+            return respondWith(204, '')(config);
+        };
+
+        await clearHistory();
+
+        expect(sent?.method).toBe('delete');
+        expect(sent?.url).toBe('/history');
+    });
+
+    it('turns a rejected request into an ApiError', async () => {
+        http.defaults.adapter = respondWith(419, { message: 'CSRF token mismatch.' });
+
+        await expect(clearHistory()).rejects.toMatchObject({ message: 'CSRF token mismatch.', status: 419 });
     });
 });
