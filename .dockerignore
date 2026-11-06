@@ -1,0 +1,20 @@
+# Keeps secrets, caches and development files out of the image.
+.git
+.github
+.env
+.env.*
+.idea
+.vscode
+node_modules
+vendor
+public/build
+public/hot
+storage/logs
+storage/framework/cache
+storage/framework/sessions
+storage/framework/views
+database/*.sqlite
+tests
+docs
+*.md
+phpunit.xml

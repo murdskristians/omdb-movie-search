@@ -15,6 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->throttleApi('60,1');
+
+        // Behind a host such as Render, the https connection ends at the host's proxy, which passes
+        // the request on as plain http and says so in the X-Forwarded-* headers. Without trusting
+        // them, Laravel would write http:// addresses for the scripts and styles of an https page,
+        // and browsers would refuse to load them.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Anything under /api answers with JSON, even without an Accept header.

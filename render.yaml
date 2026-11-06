@@ -1,0 +1,31 @@
+# Describes the web service for Render (New > Blueprint). Values marked "sync: false" are asked for
+# when the service is created, because they are secrets.
+services:
+  - type: web
+    name: omdb-movie-search
+    runtime: docker
+    plan: free
+    healthCheckPath: /up
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        sync: false
+      - key: OMDB_API_KEY
+        sync: false
+      # No database: the recent searches live in an encrypted cookie, so they survive restarts,
+      # and the cache is only a file that may disappear whenever the service restarts.
+      - key: SESSION_DRIVER
+        value: cookie
+      - key: SESSION_LIFETIME
+        value: "43200"
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: CACHE_STORE
+        value: file
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: warning

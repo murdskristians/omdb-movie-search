@@ -142,6 +142,22 @@ resources/js/
 
 The `.env.example` is meant for local work. For a real deployment set at least `APP_ENV=production` and `APP_DEBUG=false`. With debug on, error responses contain file paths and stack traces; with it off they contain only the message (checked with a test). Behind HTTPS also set `SESSION_SECURE_COOKIE=true`, so the session cookie is never sent over plain HTTP.
 
+### Deploying to Render
+
+The `Dockerfile` builds the frontend, installs the production packages, and runs the app with Apache on PHP 8.5. `render.yaml` describes the web service.
+
+1. Push the repository to GitHub.
+2. Create the key the app needs: run `php artisan key:generate --show` and keep the value, which starts with `base64:`.
+3. In the Render dashboard choose **New > Blueprint**, connect the repository, and give the two secrets when asked: `APP_KEY` (the value from step 2) and `OMDB_API_KEY`. Render builds the image and starts the service. The first build takes a few minutes.
+4. Open the address Render shows for the service (it ends in `.onrender.com`).
+
+Things to know about this setup:
+
+- The service needs no database. The recent searches live in an encrypted cookie in the visitor's browser, and the cache is a file. A restart or a new deploy empties the cache, which is only a copy of earlier OMDb answers.
+- On Render's free plan a service that gets no visits for 15 minutes is stopped, and the next visit has to wait while it starts again. The free plan also has no permanent disk. Both are described in Render's documentation.
+- Render ends the https connection and passes the request on as plain http. The app trusts the `X-Forwarded-*` headers for that reason, so it writes https addresses for its scripts and styles.
+- The OMDb key stays in Render's settings and never in the repository.
+
 ## What could come next
 
 - Filters for year and type, and a link that opens the details of a movie directly.
